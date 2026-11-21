@@ -46,11 +46,19 @@ cd server && npm test
 
 The tests cover every row of the brief's "Expected Results" tables, plus edge cases: a shared prerequisite listed once, re-saving the same prerequisites, a movie not in the graph yet, unsorted bundle sizes, a group smaller than every bundle, and a speed check at the largest allowed inputs (10 sizes, group of 10,000).
 
+API tests in `server/tests/api.test.ts` start the real Express app against an in-memory SQLite database. They check:
+
+- the rewatch counts;
+- that a rejected cycle leaves the data unchanged;
+- duplicate names, case-insensitively and including non-ASCII letters;
+- the prerequisite cap;
+- 400, 413 and 415 responses for bad request bodies.
+
 ---
 
 ## API
 
-All routes are under `/api`. Errors always look like `{ "error": "CODE", "message": "..." }`.
+All routes are under `/api`. Errors always look like `{ "error": "CODE", "message": "..." }`. Any endpoint can also return `413 PAYLOAD_TOO_LARGE` for a body over 100 KB.
 
 | Method & path | Body / query | Success | Errors |
 |---|---|---|---|
@@ -186,8 +194,8 @@ As the brief requires, both features are written by hand with no graph or optimi
 The brief left these open, so I made a choice for each:
 
 - **Release year** must be a whole number from 1900 to 2100. The 1–300 range in the brief applies to runtime only.
-- **Titles and cinema names** are trimmed and must be unique ignoring case ("iron man" clashes with "Iron Man").
-- **Prerequisites are referenced by movie id** (`prerequisiteIds`). Unknown ids or duplicates give `400`.
+- **Titles and cinema names** are trimmed and must be unique ignoring case, for any letter, not just A–Z ("iron man" clashes with "Iron Man", and "élan" with "Élan").
+- **Prerequisites are referenced by movie id** (`prerequisiteIds`), at most 500 per movie. Unknown ids or duplicates give `400`.
 - **Sending `prerequisiteIds` in a PATCH replaces the whole list**; leaving it out keeps the current one.
 - **A movie listed as its own prerequisite** returns `409 CIRCULAR_DEPENDENCY` (it's the "directly" case in the brief), not `400`.
 - **A new movie can't create a cycle**, because nothing depends on it yet. The check still runs on create, for safety.

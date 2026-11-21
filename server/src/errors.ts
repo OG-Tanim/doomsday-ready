@@ -3,7 +3,8 @@ export type ErrorCode =
   | "NOT_FOUND"
   | "DUPLICATE_TITLE"
   | "DUPLICATE_NAME"
-  | "CIRCULAR_DEPENDENCY";
+  | "CIRCULAR_DEPENDENCY"
+  | "PAYLOAD_TOO_LARGE";
 
 export class ApiError extends Error {
   constructor(

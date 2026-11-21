@@ -9,6 +9,13 @@ export const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
+/**
+ * Case-insensitive key for uniqueness checks. SQLite's NOCASE only folds A–Z,
+ * so "Élan" and "élan" would both pass; this folds any letter.
+ */
+export const nameKey = (s: string) => s.normalize("NFC").toLocaleLowerCase("en-US");
+db.function("name_key", { deterministic: true }, (s: unknown) => (typeof s === "string" ? nameKey(s) : s));
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS movies (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,

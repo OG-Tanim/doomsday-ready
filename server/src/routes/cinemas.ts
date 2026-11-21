@@ -46,7 +46,7 @@ cinemasRouter.post("/", (req, res) => {
   const bundleSizes = distinctIntArray(body.bundleSizes, "bundleSizes", { min: 1, max: 500, minLen: 1, maxLen: 10 });
 
   const id = db.transaction(() => {
-    if (db.prepare("SELECT 1 FROM cinemas WHERE name = ?").get(name)) {
+    if (db.prepare("SELECT 1 FROM cinemas WHERE name_key(name) = name_key(?)").get(name)) {
       throw new ApiError(409, "DUPLICATE_NAME", `A cinema named "${name}" already exists`);
     }
     const id = Number(db.prepare("INSERT INTO cinemas (name) VALUES (?)").run(name).lastInsertRowid);

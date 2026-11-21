@@ -1,54 +1,66 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api, errorText, formatRuntime, type Movie, type RewatchOrder } from '../api'
 
+/** Doomsday if present, otherwise the latest movie. */
+const defaultTarget = (list: Movie[]) => list.find((m) => /doomsday/i.test(m.title)) ?? list[list.length - 1]
+
 export default function RewatchPlan() {
-  const [movies, setMovies] = useState<Movie[]>([])
+  const [movies, setMovies] = useState<Movie[] | null>(null)
   const [plan, setPlan] = useState<RewatchOrder | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [refresh, setRefresh] = useState(0)
   const [params, setParams] = useSearchParams()
   const targetId = Number(params.get('target')) || null
 
   useEffect(() => {
     api
       .listMovies()
-      .then((list) => {
-        setMovies(list)
-        // Default to Doomsday (or the latest movie) so the page shows something useful.
-        if (!targetId && list.length) {
-          const pick = list.find((m) => /doomsday/i.test(m.title)) ?? list[list.length - 1]
-          setParams({ target: String(pick.id) }, { replace: true })
-        }
-      })
+      .then(setMovies)
       .catch((e) => setError(errorText(e)))
   }, [])
 
-  const loadPlan = useCallback(() => {
-    if (!targetId) return
+  // Keep the URL pointing at a real movie: fills in a default when ?target is
+  // missing (first visit, or re-clicking the nav tab) or doesn't exist.
+  useEffect(() => {
+    if (!movies || movies.length === 0) return
+    if (targetId && movies.some((m) => m.id === targetId)) return
+    setParams({ target: String(defaultTarget(movies).id) }, { replace: true })
+  }, [movies, targetId, setParams])
+
+  useEffect(() => {
+    if (!targetId || !movies?.some((m) => m.id === targetId)) return
+    // Ignore responses that arrive after the target changed (or a newer refresh started).
+    let cancelled = false
     api
       .rewatchOrder(targetId)
       .then((p) => {
+        if (cancelled) return
         setPlan(p)
         setError(null)
       })
       .catch((e) => {
-        setPlan(null)
-        setError(errorText(e))
+        if (!cancelled) setError(errorText(e))
       })
-  }, [targetId])
-
-  useEffect(loadPlan, [loadPlan])
+    return () => {
+      cancelled = true
+    }
+  }, [targetId, movies, refresh])
 
   async function toggleWatched(m: Movie) {
     try {
       await api.updateMovie(m.id, { watched: !m.watched })
-      loadPlan()
+      setRefresh((n) => n + 1)
     } catch (e) {
       setError(errorText(e))
     }
   }
 
-  const pct = plan && plan.total > 0 ? Math.round((plan.watchedCount / plan.total) * 100) : 0
+  // Only ever show the plan that belongs to the selected target. A refresh keeps
+  // the current list on screen (no flicker), while a different target hides it.
+  const shown = plan && plan.target.id === targetId ? plan : null
+  const pct = shown && shown.total > 0 ? Math.round((shown.watchedCount / shown.total) * 100) : 0
+  const list = movies ?? []
 
   return (
     <section>
@@ -59,10 +71,10 @@ export default function RewatchPlan() {
           <select
             value={targetId ?? ''}
             onChange={(e) => setParams({ target: e.target.value })}
-            disabled={movies.length === 0}
+            disabled={list.length === 0}
           >
-            {movies.length === 0 && <option value="">No movies yet</option>}
-            {movies.map((m) => (
+            {list.length === 0 && <option value="">No movies yet</option>}
+            {list.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.title}
               </option>
@@ -73,40 +85,40 @@ export default function RewatchPlan() {
 
       {error && <p className="error">{error}</p>}
 
-      {plan && (
+      {shown && (
         <div className="card">
-          {plan.total === 0 ? (
+          {shown.total === 0 ? (
             <p>
-              Nothing to catch up on: <strong>{plan.target.title}</strong> has no prerequisites.
+              Nothing to catch up on: <strong>{shown.target.title}</strong> has no prerequisites.
             </p>
           ) : (
             <>
               <div className="progress-label">
                 <span>
                   <strong>
-                    {plan.watchedCount} of {plan.total}
+                    {shown.watchedCount} of {shown.total}
                   </strong>{' '}
                   watched
                 </span>
                 <span>
-                  {plan.unwatchedRuntimeMinutes === 0
+                  {shown.unwatchedRuntimeMinutes === 0
                     ? 'All caught up!'
-                    : `${formatRuntime(plan.unwatchedRuntimeMinutes)} left`}
+                    : `${formatRuntime(shown.unwatchedRuntimeMinutes)} left`}
                 </span>
               </div>
               <div
                 className="progress"
                 role="progressbar"
                 aria-valuemin={0}
-                aria-valuemax={plan.total}
-                aria-valuenow={plan.watchedCount}
+                aria-valuemax={shown.total}
+                aria-valuenow={shown.watchedCount}
                 aria-label="Rewatch progress"
               >
                 <div className="progress-fill" style={{ width: `${pct}%` }} />
               </div>
 
               <ol className="plan">
-                {plan.movies.map((m) => (
+                {shown.movies.map((m) => (
                   <li key={m.id} className={m.watched ? 'done' : ''}>
                     <label>
                       <input type="checkbox" checked={m.watched} onChange={() => toggleWatched(m)} />
@@ -117,7 +129,7 @@ export default function RewatchPlan() {
                 ))}
               </ol>
               <p className="muted">
-                Then watch <strong>{plan.target.title}</strong>.
+                Then watch <strong>{shown.target.title}</strong>.
               </p>
             </>
           )}

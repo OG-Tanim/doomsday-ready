@@ -142,12 +142,14 @@ function MovieRow({ movie, movies, titleOf, editing, onEdit, onDone, onCancel, o
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  // Start the draft from the saved list only when the editor opens. List reloads
+  // (e.g. ticking another movie as watched) create new arrays and must not wipe it.
   useEffect(() => {
     if (editing) {
       setDraft(movie.prerequisiteIds)
       setError(null)
     }
-  }, [editing, movie.prerequisiteIds])
+  }, [editing])
 
   async function toggleWatched() {
     setError(null)

@@ -32,6 +32,8 @@ const YEAR_MIN = 1900;
 const YEAR_MAX = 2100;
 /** Placeholder id for a movie that doesn't exist yet (ids start at 1). */
 const NEW_MOVIE_ID = 0;
+/** Upper bound on one movie's prerequisite list, to keep requests cheap. */
+const MAX_PREREQUISITES = 500;
 
 // ---------- data access ----------
 
@@ -83,7 +85,7 @@ function replacePrerequisites(movieId: number, prerequisiteIds: number[]) {
 
 function assertTitleFree(title: string, exceptId?: number) {
   const clash = db
-    .prepare("SELECT id FROM movies WHERE title = ? AND id IS NOT ?")
+    .prepare("SELECT id FROM movies WHERE name_key(title) = name_key(?) AND id IS NOT ?")
     .get(title, exceptId ?? null);
   if (clash) throw new ApiError(409, "DUPLICATE_TITLE", `A movie titled "${title}" already exists`);
 }
@@ -104,7 +106,7 @@ function assertPrerequisitesValid(graph: Graph, movieId: number, prerequisiteIds
 }
 
 const parsePrereqs = (v: unknown) =>
-  distinctIntArray(v, "prerequisiteIds", { min: 1, max: Number.MAX_SAFE_INTEGER });
+  distinctIntArray(v, "prerequisiteIds", { min: 1, max: Number.MAX_SAFE_INTEGER, maxLen: MAX_PREREQUISITES });
 
 // ---------- routes ----------
 

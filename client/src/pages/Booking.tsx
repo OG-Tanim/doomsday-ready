@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { api, errorText, type BookingQuote, type Cinema } from '../api'
 
 export default function Booking() {
@@ -8,12 +8,22 @@ export default function Booking() {
   const [quote, setQuote] = useState<BookingQuote | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // Bumped whenever the inputs change, so a quote that arrives late is dropped.
+  const requestId = useRef(0)
+
+  /** Hide any quote that no longer matches the inputs on screen. */
+  const invalidateQuote = () => {
+    requestId.current++
+    setQuote(null)
+    setBusy(false)
+  }
 
   const reload = (selectId?: number) =>
     api
       .listCinemas()
       .then((list) => {
         setCinemas(list)
+        if (selectId !== undefined) invalidateQuote()
         setCinemaId((cur) => selectId ?? cur ?? list[0]?.id ?? null)
       })
       .catch((e) => setError(errorText(e)))
@@ -25,15 +35,17 @@ export default function Booking() {
   async function getQuote(e: FormEvent) {
     e.preventDefault()
     if (!cinemaId) return
+    const id = ++requestId.current
     setBusy(true)
     setError(null)
     setQuote(null)
     try {
-      setQuote(await api.bookingQuote(cinemaId, Number(groupSize)))
+      const result = await api.bookingQuote(cinemaId, Number(groupSize))
+      if (id === requestId.current) setQuote(result)
     } catch (err) {
-      setError(errorText(err))
+      if (id === requestId.current) setError(errorText(err))
     } finally {
-      setBusy(false)
+      if (id === requestId.current) setBusy(false)
     }
   }
 
@@ -51,7 +63,7 @@ export default function Booking() {
               value={cinemaId ?? ''}
               onChange={(e) => {
                 setCinemaId(Number(e.target.value))
-                setQuote(null)
+                invalidateQuote()
               }}
               disabled={cinemas.length === 0}
             >
@@ -68,7 +80,10 @@ export default function Booking() {
             <input
               type="number"
               value={groupSize}
-              onChange={(e) => setGroupSize(e.target.value)}
+              onChange={(e) => {
+                setGroupSize(e.target.value)
+                invalidateQuote()
+              }}
               min={1}
               max={10000}
               required

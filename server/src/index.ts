@@ -24,6 +24,15 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(400).json({ error: "VALIDATION_ERROR", message: "Body is not valid JSON" });
     return;
   }
+  // Other client errors from the body parser: too large (413), unsupported encoding/charset (415), etc.
+  const status = typeof err?.status === "number" ? err.status : typeof err?.statusCode === "number" ? err.statusCode : 0;
+  if (status >= 400 && status < 500) {
+    res.status(status).json({
+      error: status === 413 ? "PAYLOAD_TOO_LARGE" : "VALIDATION_ERROR",
+      message: typeof err.message === "string" && err.expose !== false ? err.message : "Bad request",
+    });
+    return;
+  }
   console.error(err);
   res.status(500).json({ error: "INTERNAL_ERROR", message: "Something went wrong" });
 };

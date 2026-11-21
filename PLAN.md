@@ -4,6 +4,11 @@
 **Split:** **You** hand-write the 3 algorithm functions (the brief requires this for features 1 & 2). **Claude** scaffolds everything else and writes the tests your functions must pass.
 **Cut order if late:** Docker Compose first.
 
+> **What changed during the build** (the plan below is kept as originally written):
+> - The 3 algorithm functions were written by Claude at the user's request, not hand-written as planned.
+> - Docker images use `node:24-slim`.
+> - Added after the plan: an Avengers-inspired dark theme, Unicode-aware name uniqueness, a 500-item cap on `prerequisiteIds`, `413 PAYLOAD_TOO_LARGE`, and API integration tests.
+
 ---
 
 ## 1. Task analysis
@@ -117,7 +122,7 @@ The routes build the `Graph` from the DB on each request. The data is tiny, so t
 | **5–20** | DB schema, seed, errors, validation, movie + cinema routes wired to your functions | Write `wouldCreateCycle` + `rewatchOrder`, run `npm test` |
 | **20–28** | curl smoke test of all 7 endpoints against the seed data | Write `quoteBooking`, get all tests green |
 | **28–45** | React: router + nav, **Movies** (add form, prerequisite multi-select, watched checkbox, inline 409 messages), **Rewatch Plan** (target select, ordered list with ticks, progress bar "4 of 7 watched", remaining time as `Xh Ym`), **Booking** (cinema select, group size, result, small add-cinema form) | Review the API code and the UI in the browser |
-| **45–52** | Docker Compose: `server` (node:22-slim, because better-sqlite3 needs glibc prebuilt binaries) + `client` (build → nginx, proxy `/api`), SQLite volume. **First thing to cut.** | — |
+| **45–52** | Docker Compose: `server` (node:24-slim, because better-sqlite3 needs glibc prebuilt binaries) + `client` (build → nginx, proxy `/api`), SQLite volume. **First thing to cut.** | — |
 | **52–58** | README: run steps, API table, assumptions (§2), Mermaid diagram, **AI usage section** (honest: Claude scaffolded the API/UI/Docker/tests; you wrote the algorithms) | Write the AI-usage paragraph in your own words |
 | **58–60** | Final `npm test` + clean-start check | Push to GitHub, submit the form |
 
@@ -133,5 +138,5 @@ The routes build the `Graph` from the DB on each request. The data is tiny, so t
 ## 6. Risks
 
 - **Running over time on the algorithms** → after 25 minutes on them, check the hints in §1 rather than getting stuck. The tests show exactly which case fails.
-- **better-sqlite3 native build** in Docker → use the `node:22-slim` image, not alpine.
+- **better-sqlite3 native build** in Docker → use the `node:24-slim` image, not alpine.
 - **Tie-breaking in booking** → any minimal answer is valid. Write the rule down in the README.
