@@ -100,3 +100,42 @@ describe("request body errors", () => {
     expect(r.body.error).toBe("VALIDATION_ERROR");
   });
 });
+
+describe("DELETE /movies/:id", () => {
+  const ids: Record<string, number> = {};
+  const add = async (title: string, prerequisiteIds: number[] = []) => {
+    const r = await call("POST", "/movies", { title, releaseYear: 2015, runtimeMinutes: 100, prerequisiteIds });
+    expect(r.status).toBe(201);
+    ids[title] = r.body.id;
+  };
+
+  beforeAll(async () => {
+    await add("Del A");
+    await add("Del B");
+    await add("Del Mid", [ids["Del A"], ids["Del B"]]);
+    await add("Del Top", [ids["Del Mid"]]);
+  });
+
+  it("rewires dependents to the deleted movie's prerequisites and reports them", async () => {
+    const r = await call("DELETE", `/movies/${ids["Del Mid"]}`);
+    expect(r.status).toBe(200);
+    expect(r.body.deletedId).toBe(ids["Del Mid"]);
+    expect(r.body.updatedMovies).toHaveLength(1);
+    expect(r.body.updatedMovies[0]).toMatchObject({ id: ids["Del Top"], prerequisiteIds: [ids["Del A"], ids["Del B"]] });
+
+    const order = await call("GET", `/movies/${ids["Del Top"]}/rewatch-order`);
+    expect(order.body.movies.map((m: { id: number }) => m.id).sort()).toEqual([ids["Del A"], ids["Del B"]].sort());
+
+    const list = await call("GET", "/movies");
+    expect(list.body.some((m: { id: number }) => m.id === ids["Del Mid"])).toBe(false);
+  });
+
+  it("frees the title for reuse", async () => {
+    expect((await call("POST", "/movies", { title: "del mid", releaseYear: 2015, runtimeMinutes: 90 })).status).toBe(201);
+  });
+
+  it("returns 404 for a missing movie and 400 for a bad id", async () => {
+    expect((await call("DELETE", `/movies/${ids["Del Mid"]}`)).body.error).toBe("NOT_FOUND");
+    expect((await call("DELETE", "/movies/abc")).status).toBe(400);
+  });
+});

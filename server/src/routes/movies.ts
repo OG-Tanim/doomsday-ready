@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db.js";
 import { ApiError } from "../errors.js";
-import { rewatchOrder, wouldCreateCycle, type Graph } from "../algorithms/graph.js";
+import { bridgeOnDelete, rewatchOrder, wouldCreateCycle, type Graph } from "../algorithms/graph.js";
 import {
   asObject,
   boolean,
@@ -181,4 +181,23 @@ moviesRouter.get("/:id/rewatch-order", (req, res) => {
     watchedCount: movies.filter((m) => m.watched).length,
     unwatchedRuntimeMinutes: movies.filter((m) => !m.watched).reduce((sum, m) => sum + m.runtimeMinutes, 0),
   });
+});
+
+/**
+ * Permanently deletes a movie. Movies that listed it as a prerequisite take over
+ * its prerequisites instead, so their watch order is unchanged
+ * (delete The Avengers → Civil War now needs Iron Man and The First Avenger).
+ */
+moviesRouter.delete("/:id", (req, res) => {
+  const id = positiveIntParam(req.params.id, "id");
+
+  const updatedIds = db.transaction(() => {
+    loadMovie(id); // 404 if missing
+    const rewired = bridgeOnDelete(loadGraph(), id);
+    for (const [dependentId, prereqs] of rewired) replacePrerequisites(dependentId, prereqs);
+    db.prepare("DELETE FROM movies WHERE id = ?").run(id); // its own links go via ON DELETE CASCADE
+    return [...rewired.keys()];
+  })();
+
+  res.json({ deletedId: id, updatedMovies: updatedIds.map(loadMovie) });
 });

@@ -63,6 +63,8 @@ export const api = {
   createMovie: (movie: NewMovie) => request<Movie>('/movies', { method: 'POST', body: movie }),
   updateMovie: (id: number, patch: Partial<Omit<Movie, 'id'>>) =>
     request<Movie>(`/movies/${id}`, { method: 'PATCH', body: patch }),
+  deleteMovie: (id: number) =>
+    request<{ deletedId: number; updatedMovies: Movie[] }>(`/movies/${id}`, { method: 'DELETE' }),
   rewatchOrder: (id: number) => request<RewatchOrder>(`/movies/${id}/rewatch-order`),
   listCinemas: () => request<Cinema[]>('/cinemas'),
   createCinema: (cinema: Omit<Cinema, 'id'>) => request<Cinema>('/cinemas', { method: 'POST', body: cinema }),

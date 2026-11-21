@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rewatchOrder, wouldCreateCycle, type Graph } from "../src/algorithms/graph.js";
+import { bridgeOnDelete, rewatchOrder, wouldCreateCycle, type Graph } from "../src/algorithms/graph.js";
 import { quoteBooking } from "../src/algorithms/booking.js";
 
 // Sample data from the brief
@@ -86,6 +86,37 @@ describe("wouldCreateCycle", () => {
 
   it("empty prerequisite list → no cycle", () => {
     expect(wouldCreateCycle(sample(), DOOMSDAY, [])).toBe(false);
+  });
+});
+
+describe("bridgeOnDelete", () => {
+  it("dependents inherit the deleted movie's prerequisites (delete The Avengers)", () => {
+    const result = bridgeOnDelete(sample(), AVENGERS);
+    expect(result).toEqual(new Map([[CIVIL_WAR, [IRON_MAN, FIRST_AVENGER]]]));
+  });
+
+  it("keeps the rewatch order of every dependent intact", () => {
+    const g = sample();
+    const before = rewatchOrder(g, DOOMSDAY).filter((id) => id !== CIVIL_WAR);
+    for (const [id, prereqs] of bridgeOnDelete(g, CIVIL_WAR)) g.set(id, prereqs);
+    g.delete(CIVIL_WAR);
+    const after = rewatchOrder(g, DOOMSDAY);
+    expect(new Set(after)).toEqual(new Set(before));
+    expectValidOrder(g, DOOMSDAY, after);
+  });
+
+  it("keeps existing prerequisites first and skips exact duplicates", () => {
+    // 4 needs [1, 3]; 3 needs [1, 2]. Deleting 3 gives 4 -> [1, 2], not [1, 1, 2].
+    const g: Graph = new Map([[1, []], [2, []], [3, [1, 2]], [4, [1, 3]]]);
+    expect(bridgeOnDelete(g, 3)).toEqual(new Map([[4, [1, 2]]]));
+  });
+
+  it("a movie with no prerequisites just disappears from its dependents' lists", () => {
+    expect(bridgeOnDelete(sample(), RAGNAROK)).toEqual(new Map([[INFINITY_WAR, [CIVIL_WAR]]]));
+  });
+
+  it("a movie nobody depends on changes nothing", () => {
+    expect(bridgeOnDelete(sample(), DOOMSDAY).size).toBe(0);
   });
 });
 

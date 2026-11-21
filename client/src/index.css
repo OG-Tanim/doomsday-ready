@@ -118,6 +118,14 @@ legend { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
 .prereqs { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .tag { background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border); border-radius: 4px; padding: 1px 8px; font-size: 0.78rem; }
 .editor { margin-top: 12px; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.row-actions button { margin-top: 0; }
+button.danger { color: var(--error); }
+button.danger:hover:not(:disabled) { border-color: var(--red); background: var(--error-bg); }
+button.danger-solid { background: var(--red); border-color: var(--red); }
+.confirm { margin-top: 12px; padding: 12px; border: 1px solid rgba(200, 48, 58, 0.45); border-radius: 8px; background: var(--error-bg); }
+.confirm p { margin: 0 0 6px; }
+.confirm ul { margin: 0 0 4px; padding-left: 20px; }
 
 /* ---------- rewatch plan ---------- */
 .progress-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }

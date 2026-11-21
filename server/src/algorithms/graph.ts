@@ -33,6 +33,28 @@ export function wouldCreateCycle(graph: Graph, movieId: number, newPrereqIds: nu
 }
 
 /**
+ * What deleting `movieId` does to the movies that depend on it: each dependent
+ * takes over the deleted movie's prerequisites, so the watch order is kept.
+ * Returns dependentId -> its new prerequisite list (existing ones first, in order,
+ * then inherited ones not already listed). Movies that don't depend on `movieId`
+ * are not in the result.
+ *
+ * This can't create a cycle: each new link D -> P replaces the path
+ * D -> movieId -> P that already existed.
+ */
+export function bridgeOnDelete(graph: Graph, movieId: number): Map<number, number[]> {
+  const inherited = graph.get(movieId) ?? [];
+  const result = new Map<number, number[]>();
+  for (const [id, prereqs] of graph) {
+    if (id === movieId || !prereqs.includes(movieId)) continue;
+    const kept = prereqs.filter((p) => p !== movieId);
+    const added = inherited.filter((p) => p !== id && !kept.includes(p));
+    result.set(id, [...kept, ...added]);
+  }
+  return result;
+}
+
+/**
  * Every movie the target depends on (directly or not), each exactly once,
  * ordered so each movie comes after all of its prerequisites. Target excluded.
  *

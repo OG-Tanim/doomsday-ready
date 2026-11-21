@@ -65,6 +65,7 @@ All routes are under `/api`. Errors always look like `{ "error": "CODE", "messag
 | `POST /movies` | `{ title, releaseYear, runtimeMinutes, prerequisiteIds?, watched? }` | `201` movie | `400 VALIDATION_ERROR`, `409 DUPLICATE_TITLE`, `409 CIRCULAR_DEPENDENCY` |
 | `GET /movies` | — | `200` movie list | — |
 | `PATCH /movies/:id` | any of the fields above | `200` movie | `400`, `404 NOT_FOUND`, `409 DUPLICATE_TITLE`, `409 CIRCULAR_DEPENDENCY` |
+| `DELETE /movies/:id` | — | `200 { deletedId, updatedMovies }` | `400`, `404` |
 | `GET /movies/:id/rewatch-order` | — | `200` see below | `404` |
 | `POST /cinemas` | `{ name, bundleSizes }` | `201` cinema | `400`, `409 DUPLICATE_NAME` |
 | `GET /cinemas` | — | `200` cinema list | — |
@@ -164,6 +165,10 @@ This is a **topological sort** of everything the target depends on, done with a 
 
 The route then counts the watched movies and adds up the runtimes of the unwatched ones.
 
+**Deleting: `bridgeOnDelete(graph, movieId)`**
+
+For each movie *D* that lists the deleted movie *M*, this returns *D*'s new prerequisite list: its other prerequisites, then *M*'s prerequisites that *D* doesn't already have. The route saves those lists and deletes *M* in one transaction. Every path through *M* becomes a direct link, so all rewatch orders still hold, and no cycle can appear. It is one pass over the graph: **O(V + E)**.
+
 The API loads the graph from SQLite and passes it to these functions. Each create or update runs in one transaction, so a rejected change leaves nothing behind.
 
 ### Feature 2: Booking quote
@@ -205,7 +210,7 @@ The brief left these open, so I made a choice for each:
 - **The UI hides a movie from its own prerequisite picker**; the API still guards against it.
 - **The UI also lets you add cinemas** (on the Booking page), since the brief has an API for it but no screen.
 - **Sample runtimes are approximate**; Doomsday's 150 minutes is a placeholder.
-- **No delete endpoints**, as the brief didn't ask for them.
+- **Deleting a movie is permanent and keeps everyone's watch order.** Movies that listed it as a prerequisite take over its prerequisites. For example, deleting The Avengers means Civil War now needs Iron Man and The First Avenger directly. Exact duplicates are skipped, but a new link may be redundant when the movie already reaches that prerequisite another way. That doesn't change the order. The response lists the movies that were rewired, and the Movies page shows this impact before you confirm. This can't create a cycle, because each new link replaces a path that already existed. Cinemas have no delete endpoint, as the brief didn't ask for one.
 
 ---
 

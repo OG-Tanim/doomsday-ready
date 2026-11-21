@@ -45,6 +45,12 @@ export default function Movies() {
             }}
             onCancel={() => setEditingId(null)}
             onChanged={reload}
+            onDeleted={() => {
+              // A delete can rewire other movies' prerequisites, so any open
+              // editor's draft may be out of date: close it.
+              setEditingId(null)
+              reload()
+            }}
           />
         ))}
       </ul>
@@ -58,6 +64,11 @@ function AddMovieForm({ movies, onAdded }: { movies: Movie[]; onAdded: () => voi
   const [runtimeMinutes, setRuntimeMinutes] = useState('')
   const [prerequisiteIds, setPrerequisiteIds] = useState<number[]>([])
   const [error, setError] = useState<string | null>(null)
+
+  // Drop picks for movies that were deleted since they were ticked.
+  useEffect(() => {
+    setPrerequisiteIds((ids) => ids.filter((id) => movies.some((m) => m.id === id)))
+  }, [movies])
   const [busy, setBusy] = useState(false)
 
   async function submit(e: FormEvent) {
@@ -135,12 +146,41 @@ type RowProps = {
   onDone: () => void
   onCancel: () => void
   onChanged: () => void
+  onDeleted: () => void
 }
 
-function MovieRow({ movie, movies, titleOf, editing, onEdit, onDone, onCancel, onChanged }: RowProps) {
+/**
+ * What deleting `movie` will do to the movies that depend on it. Mirrors the
+ * server: each dependent takes over the deleted movie's prerequisites.
+ */
+function deleteImpact(movie: Movie, movies: Movie[], titleOf: (id: number) => string): string[] {
+  return movies
+    .filter((d) => d.id !== movie.id && d.prerequisiteIds.includes(movie.id))
+    .map((d) => {
+      const added = movie.prerequisiteIds.filter((p) => p !== d.id && !d.prerequisiteIds.includes(p))
+      return added.length > 0
+        ? `${d.title} will need ${added.map(titleOf).join(', ')} directly instead.`
+        : `${d.title} will no longer list it as a prerequisite.`
+    })
+}
+
+function MovieRow({ movie, movies, titleOf, editing, onEdit, onDone, onCancel, onChanged, onDeleted }: RowProps) {
   const [draft, setDraft] = useState<number[]>(movie.prerequisiteIds)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+
+  async function deleteMovie() {
+    setBusy(true)
+    setError(null)
+    try {
+      await api.deleteMovie(movie.id)
+      onDeleted()
+    } catch (err) {
+      setError(errorText(err))
+      setBusy(false)
+    }
+  }
 
   // Start the draft from the saved list only when the editor opens. List reloads
   // (e.g. ticking another movie as watched) create new arrays and must not wipe it.
@@ -204,12 +244,50 @@ function MovieRow({ movie, movies, titleOf, editing, onEdit, onDone, onCancel, o
             </div>
           )}
         </div>
-        {!editing && (
-          <button type="button" className="secondary" onClick={onEdit}>
-            Edit prerequisites
-          </button>
+        {!editing && !confirmingDelete && (
+          <div className="row-actions">
+            <button type="button" className="secondary" onClick={onEdit}>
+              Edit prerequisites
+            </button>
+            <button
+              type="button"
+              className="secondary danger"
+              onClick={() => setConfirmingDelete(true)}
+              aria-label={`Delete ${movie.title}`}
+            >
+              Delete
+            </button>
+          </div>
         )}
       </div>
+
+      {confirmingDelete && (
+        <div className="confirm" role="alertdialog" aria-label={`Delete ${movie.title}?`}>
+          <p>
+            <strong>Delete {movie.title}?</strong> This can’t be undone.
+          </p>
+          {(() => {
+            const impact = deleteImpact(movie, movies, titleOf)
+            return impact.length === 0 ? (
+              <p className="muted">No other movie depends on it.</p>
+            ) : (
+              <ul>
+                {impact.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            )
+          })()}
+          <div className="row">
+            <button type="button" className="danger-solid" onClick={deleteMovie} disabled={busy}>
+              {busy ? 'Deleting…' : 'Delete movie'}
+            </button>
+            <button type="button" className="secondary" onClick={() => setConfirmingDelete(false)} disabled={busy}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {editing && (
         <div className="editor">
