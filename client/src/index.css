@@ -1,0 +1,149 @@
+/* Doomsday Ready: dark, Avengers-inspired theme (original design; no Marvel assets).
+   Fonts: Bebas Neue + Inter (OFL). */
+
+:root {
+  color-scheme: dark;
+  --bg: #0a0f1d;
+  --panel: rgba(16, 23, 41, 0.86);
+  --panel-solid: #101729;
+  --field: #0b1222;
+  --border: #253250;
+  --border-strong: #34446a;
+  --text: #e8ecf4;
+  --muted: #97a3bb;
+  --red: #c8303a;
+  --red-hover: #dc3d47;
+  --gold: #e3b44f;
+  --gold-soft: rgba(227, 180, 79, 0.14);
+  --error: #ff8a8f;
+  --error-bg: rgba(200, 48, 58, 0.14);
+  --ok-bg: rgba(227, 180, 79, 0.08);
+  --display: 'Bebas Neue', 'Impact', 'Arial Narrow', sans-serif;
+  font-family: 'Inter Variable', system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  accent-color: var(--gold);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
+
+/* Soft red glow at the top over a deep navy base */
+body { background: radial-gradient(ellipse 90% 420px at 50% 0, rgba(200, 48, 58, 0.10), transparent 70%) no-repeat, var(--bg); }
+
+.app { max-width: 900px; margin: 0 auto; padding: 16px 16px 40px; }
+
+/* ---------- header ---------- */
+header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  padding: 8px 0 14px; border-bottom: 1px solid var(--border); margin-bottom: 8px;
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand svg { width: 42px; height: 42px; flex: none; }
+.brand h1 {
+  margin: 0; font-family: var(--display); font-weight: 400; font-size: 2.1rem;
+  letter-spacing: 0.06em; line-height: 1;
+}
+.brand h1 span { color: var(--gold); }
+.tagline { margin: 3px 0 0; color: var(--muted); font-size: 0.8rem; letter-spacing: 0.02em; }
+
+nav { display: flex; gap: 4px; flex-wrap: wrap; }
+nav a {
+  padding: 7px 14px; border-radius: 6px; text-decoration: none; color: var(--muted);
+  font-family: var(--display); font-size: 1.15rem; letter-spacing: 0.08em; border: 1px solid transparent;
+}
+nav a:hover { color: var(--text); border-color: var(--border); }
+nav a.active { color: #fff; background: var(--red); border-color: var(--red); }
+
+/* ---------- type ---------- */
+h2 {
+  margin: 22px 0 12px; font-family: var(--display); font-weight: 400; font-size: 1.9rem; letter-spacing: 0.06em;
+}
+h2::after {
+  content: ''; display: block; width: 44px; height: 3px; margin-top: 4px;
+  background: linear-gradient(90deg, var(--red), var(--gold)); border-radius: 2px;
+}
+h3 { margin: 0 0 12px; font-family: var(--display); font-weight: 400; font-size: 1.3rem; letter-spacing: 0.06em; color: var(--gold); }
+.muted { color: var(--muted); font-size: 0.9rem; }
+strong { font-weight: 650; }
+
+/* ---------- panels and forms ---------- */
+.card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; margin-bottom: 12px;
+}
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.grow { flex: 1; min-width: 0; }
+label { display: flex; flex-direction: column; gap: 5px; font-size: 0.85rem; color: var(--muted); }
+input, select, button { font: inherit; }
+input[type="number"], input:not([type]), select {
+  padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 6px;
+  background: var(--field); color: var(--text); min-width: 0;
+}
+input::placeholder { color: #5f6b84; }
+input:focus-visible, select:focus-visible, button:focus-visible, .chip:focus-within {
+  outline: 2px solid var(--gold); outline-offset: 1px;
+}
+input[type="number"] { width: 120px; }
+button {
+  padding: 8px 16px; border: 1px solid var(--red); border-radius: 6px; background: var(--red); color: #fff;
+  cursor: pointer; margin-top: 10px; font-weight: 600; letter-spacing: 0.01em;
+}
+button:hover:not(:disabled) { background: var(--red-hover); }
+button:disabled { opacity: 0.55; cursor: default; }
+button.secondary { background: transparent; border-color: var(--border-strong); color: var(--text); }
+button.secondary:hover:not(:disabled) { background: rgba(255, 255, 255, 0.05); }
+fieldset { border: none; padding: 0; margin: 14px 0 0; }
+legend { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+.error { color: var(--error); background: var(--error-bg); border: 1px solid rgba(200, 48, 58, 0.35); padding: 8px 10px; border-radius: 6px; margin: 8px 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---------- prerequisite picker ---------- */
+.picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  flex-direction: row; align-items: center; gap: 6px; padding: 4px 10px; color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 999px; cursor: pointer; font-size: 0.82rem;
+}
+.chip:hover { border-color: var(--muted); }
+.chip-on { border-color: var(--gold); background: var(--gold-soft); }
+
+/* ---------- movie list ---------- */
+.movie-list { list-style: none; padding: 0; margin: 0; }
+.movie { border-left: 3px solid var(--border-strong); }
+.movie:has(.watched input:checked) { border-left-color: var(--gold); }
+.movie-head { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.movie-head button { margin-top: 0; }
+.watched { flex-direction: row; padding-top: 2px; }
+.watched input, .plan input { width: 18px; height: 18px; }
+.prereqs { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.tag { background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border); border-radius: 4px; padding: 1px 8px; font-size: 0.78rem; }
+.editor { margin-top: 12px; }
+
+/* ---------- rewatch plan ---------- */
+.progress-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.progress { height: 10px; background: var(--field); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--gold)); transition: width 0.3s; }
+.plan { padding-left: 26px; margin: 16px 0 8px; }
+.plan li { padding: 7px 0; border-bottom: 1px solid var(--border); }
+.plan li::marker { color: var(--gold); font-family: var(--display); font-size: 1.05rem; }
+.plan label { flex-direction: row; align-items: center; gap: 10px; cursor: pointer; font-size: 1rem; color: var(--text); }
+.plan li.done .grow { color: var(--muted); text-decoration: line-through; }
+
+/* ---------- booking ---------- */
+.result { background: var(--ok-bg); border-color: rgba(227, 180, 79, 0.45); }
+.result-bad { background: var(--error-bg); border-color: rgba(200, 48, 58, 0.45); }
+.result p { margin: 0 0 6px; }
+.result ul { margin: 0; }
+
+footer { margin-top: 28px; color: #6c7891; font-size: 0.75rem; text-align: center; }
+footer a { color: inherit; }
+
+@media (max-width: 520px) {
+  input[type="number"] { width: 100%; }
+  .row > label { flex: 1 1 100%; }
+  .brand h1 { font-size: 1.8rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-fill { transition: none; }
+}
